@@ -1,0 +1,25 @@
+---
+- name: Backup with borg
+  hosts: localhost
+  vars:
+    borg_repo_full_path: "{{ borg_repo_path | regex_replace('\\/$', '') }}/{{ borg_repo_name }}"
+  environment:
+    BORG_PASSPHRASE: "{{ borg_passphrase }}"
+    BORG_RSH: ssh -i {{ private_key_path }}
+    BORG_REPO: "{{ ssh_connection }}:{{ borg_repo_full_path }}"
+
+  tasks:
+    - name: Check if the repository is present
+      command: ssh -i {{ private_key_path }} {{ ssh_connection }} "[ -d '{{ borg_repo_full_path }}' ]"
+      register: repository_exists
+      failed_when: repository_exists.rc != 1 and repository_exists.rc != 0
+
+    - name: Make sure the repository is initialized
+      command: borg init
+      when: repository_exists.rc == 1
+
+    - name: Backup the folder
+      command: borg create ::{{ borg_repo_name }}_{{ lookup('pipe','date +%Y-%m-%d_%H-%M-%S') }} {{ local_folder }}
+
+    - name: Prune the folder
+      command: borg prune --keep-daily=7 --keep-weekly=4 --keep-monthly=6 --keep-yearly=2 --prefix={{ borg_repo_name }}_
