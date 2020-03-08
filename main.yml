@@ -15,7 +15,7 @@
       failed_when: repository_exists.rc != 1 and repository_exists.rc != 0
 
     - name: Make sure the repository is initialized
-      command: borg init --encryption=repokey-blake2 {{ borg_repo_full_path }}
+      command: borg init --encryption=repokey-blake2 {{ borg_repo_path | regex_replace('\\/$', '') }}
       when: repository_exists.rc == 1
 
     - name: Backup the folder
